@@ -19,18 +19,18 @@ def get_version(rel_path: str) -> str:
 
 
 setup(
-    name='chris-plugin-template',
-    version=get_version('app.py'),
-    description='A ChRIS DS plugin template',
+    name='dyworkflow',
+    version=get_version('dyworkflow.py'),
+    description='A ChRIS plugin that "splits" a parent into multiple children and adds a specified workflow to each child',
     author='FNNDSC',
     author_email='dev@babyMRI.org',
-    url='https://github.com/FNNDSC/python-chrisapp-template',
-    py_modules=['app'],
+    url='https://github.com/FNNDSC/pl-dywork',
+    py_modules=['dyworkflow'],
     install_requires=['chris_plugin'],
     license='MIT',
     entry_points={
         'console_scripts': [
-            'commandname = app:main'
+            'dyworkflow = dyworkflow:main'
         ]
     },
     classifiers=[
