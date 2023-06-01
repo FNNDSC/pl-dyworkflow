@@ -242,7 +242,8 @@ def preamble(options: Namespace) -> str:
 
 def childFilter_build(options: Namespace, Env : data.env) -> action.PluginRun:
     """
-    Return a filter object that will create one child from the parent.
+    Return a filter object that will be used to filter one child from the
+    parent.
 
     Args:
         options (Namespace): options namespace
@@ -373,7 +374,8 @@ def parentNode_process(options: Namespace, env:data.env, input: Path, output: Pa
 
 def mapper_resolve(options:Namespace, inputdir:Path, outputdir:Path) -> PathMapper:
     """
-    Return a mapper
+    Simply creates and returns a mapper -- either a dir_mapper_deep or a
+    file_mapper depending on options settings.
 
     Args:
         options (Namespace): CLI namespace
