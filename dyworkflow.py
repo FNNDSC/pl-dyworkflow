@@ -44,7 +44,7 @@ timenow:Callable[[], str]       = lambda:\
 
 ld_forestResult:list            = []
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 DISPLAY_TITLE = r"""
        _           _                          _     __ _
