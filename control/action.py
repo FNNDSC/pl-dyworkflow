@@ -145,22 +145,21 @@ class Workflow:
     A class to create / manage the LLD compute flow
     '''
 
-    def __init__(self, *args, **kwargs):
-        self.env                : data.env          = None
-        self.options            : Namespace         = None
+    def __init__(self, *args, **kwargs) -> None:
+        self.env                : data.env
+        self.options            : Namespace
 
         for k, v in kwargs.items():
             if k == 'env'               : self.env                  = v
             if k == 'options'           : self.options              = v
 
-        self.cl         : client.Client = None
-        self.cl                         = client.Client(
+        self.cl         : client.Client = client.Client(
                                             self.env.CUBE('url'),
                                             self.env.CUBE('username'),
                                             self.env.CUBE('password')
                                         )
         self.d_pipelines        : dict  = self.cl.get_pipelines()
-        self.pltopo             : int   = self.cl.get_plugins({'name': 'pl-topologicalcopy'})
+        self.pltopo             : dict  = self.cl.get_plugins({'name': 'pl-topologicalcopy'})
         self.newTreeID          : int   = -1
         self.ld_workflowhist    : list  = []
         self.ld_topologicalNode : dict  = {'data': []}
@@ -266,15 +265,15 @@ class Workflow:
         }
 
     def pluginParameters_setInNodes(self,
-            d_piping            : dict,
+            l_pipes             : list,
             d_pluginParameters  : dict
-        ) -> dict:
+        ) -> list:
         """
         Override default parameters in the `d_piping`
 
         Args:
-            d_piping (dict):            the current default parameters for the
-                                        plugins in a pipeline
+            l_pipes (list):             the current default parameters for the
+                                        list of plugins in a pipeline
             d_pluginParameters (dict):  a list of plugins and parameters to
                                         set in the response
 
@@ -285,13 +284,13 @@ class Workflow:
 
         """
         for pluginTitle,d_parameters in d_pluginParameters.items():
-            for piping in d_piping:
+            for piping in l_pipes:
                 if pluginTitle in piping.get('title'):
                     for k,v in d_parameters.items():
                         for d_default in piping.get('plugin_parameter_defaults'):
                             if k in d_default.get('name'):
                                 d_default['default'] = v
-        return d_piping
+        return l_pipes
 
     def pipelineWithName_getNodes(
             self,
@@ -322,7 +321,6 @@ class Workflow:
             d_response  : dict  = self.cl.get_pipeline_default_parameters(
                                         id_pipeline, {'limit': 1000}
                                 )
-            pudb.set_trace()
             if 'data' in d_response:
                 ld_node         = self.pluginParameters_setInNodes(
                                     self.cl.compute_workflow_nodes_info(d_response['data'], True),
@@ -423,7 +421,7 @@ class Workflow:
             bool: is parent done? True or False
 
         """
-        d_parent            : dict          = None
+        d_parent            : dict          = {}
         b_finished          : bool          = False
         if len(args)        : d_parent      = args[0]
         if not d_parent     : b_finished    = True
@@ -441,7 +439,7 @@ class Workflow:
         Returns:
             list: the parent id appended to the end of the list
         """
-        d_parent            : dict          = None
+        d_parent            : dict          = {}
         if len(args):
             d_parent    = args[0]
             l_nodes.append(self.parentNode_IDget(*args))
@@ -456,7 +454,7 @@ class Workflow:
             int: parent plugin instance id of passed `d_parent` structure
         """
         id                  : int           = -1
-        d_parent            : dict          = None
+        d_parent            : dict          = {}
         if len(args):
             d_parent    = args[0]
             id          = d_parent['plinst']['id']
@@ -496,7 +494,7 @@ class Workflow:
                         )
         return pluginID
 
-    def nodeIDs_verify(self, l_nodeID : list) -> list[int]:
+    def nodeIDs_verify(self, l_nodeID:list) -> list[int]:
         """
 
         Verify that a list of <l_nodeID> contains only int
@@ -511,7 +509,7 @@ class Workflow:
         Returns:
             list: list containing only node IDs
         """
-        l_nodeID: list[int] = [self.pluginID_findInWorkflowDesc(x) for x in l_nodeID]
+        l_nodeID = [self.pluginID_findInWorkflowDesc(x) for x in l_nodeID]
         return l_nodeID
 
     def flow_executeAndBlockUntilNodeComplete(
@@ -535,7 +533,7 @@ class Workflow:
 
         Possible future extension: block until node _list_ complete
         """
-        d_prior             : dict  = None
+        d_prior             : dict  = {}
         str_workflowTitle   : str   = "no workflow title"
         attachToNodeID      : int   = -1
         str_blockNodeTitle  : str   = "no node title"
@@ -579,7 +577,7 @@ class Workflow:
         Returns:
             dict: data structure on the nodes_join operation
         """
-        d_prior             : dict  = None
+        d_prior             : dict  = {}
         str_joinNodeTitle   : str   = "no title specified for topo node"
         l_nodeID            : list  = []
         str_topoJoinArgs    : str   = ""
@@ -626,7 +624,7 @@ class Workflow:
         d_ret : dict = \
         self.flow_executeAndBlockUntilNodeComplete(
             attachToNodeID          = self.newTreeID,
-            workflowTitle           = 'Leg Length Discrepency Full Workflow v20230425',
+            workflowTitle           = self.options.pipeline,
             waitForNodeWithTitle    = 'pacs-push',
             totalPolls              = totalPolls,
             pluginParameters        = {
@@ -654,82 +652,12 @@ class Workflow:
                     'pftelDB'           : self.options.pftelDB,
                     'orthancUrl'        : self.env.orthanc('url'),
                     'username'          : self.env.orthanc('username'),
-                    'password'          : self.env.orthanc('password')
+                    'password'          : self.env.orthanc('password'),
+                    'pushToRemote'      : self.env.orthanc('remote')
                 }
             }
         )
 
-        # self.flow_executeAndBlockUntilNodeComplete(
-        #     self.flows_connect(
-        #         self.flow_executeAndBlockUntilNodeComplete(
-        #             self.flows_connect(
-        #                 self.flow_executeAndBlockUntilNodeComplete(
-        #                     self.flows_connect(
-        #                         self.flow_executeAndBlockUntilNodeComplete(
-        #                             attachToNodeID          = self.newTreeID,
-        #                             workflowTitle           = 'Leg Length Discrepency inference on DICOM inputs v20230323 using CPU',
-        #                             waitForNodeWithTitle    = 'heatmaps',
-        #                             totalPolls              = totalPolls,
-        #                             pluginParameters        = {
-        #                                 'dcm-to-mha'  : {
-        #                                             'imageName'         : 'composite.png',
-        #                                             'rotate'            : '90',
-        #                                             'pftelDB'           : self.options.pftelDB
-        #                                 },
-        #                                 'generate-landmark-heatmaps' : {
-        #                                             'heatmapThreshold' : '0.5',
-        #                                             'imageType'        : 'jpg',
-        #                                             'compositeWeight'  : '0.3,0.7',
-        #                                             'pftelDB'           : self.options.pftelDB
-        #                                 }
-        #                             }
-        #                         ),
-        #                         connectionNodeTitle     = 'mergeDICOMSwithInference',
-        #                         distalNodeIDs           = [self.newTreeID],
-        #                         topoJoinArgs            = '\.dcm$,\.csv$'
-        #                     ),
-        #                     workflowTitle           = 'Leg Length Discrepency prediction formatter v20230323',
-        #                     waitForNodeWithTitle    = 'landmarks-to-json',
-        #                     totalPolls              = totalPolls,
-        #                     pluginParameters        = {
-        #                         'landmarks-to-json' : {
-        #                             'pftelDB'       : self.options.pftelDB
-        #                         }
-        #                     }
-        #                 ),
-        #                 connectionNodeTitle     = 'mergeJPGSwithInference',
-        #                 distalNodeIDs           = [('Leg Length Discrepency inference', 'heatmaps')],
-        #                 topoJoinArgs            = '\.jpg$,\.json$'
-        #             ),
-        #             workflowTitle           = 'Leg Length Discrepency measurements on image v20230323',
-        #             waitForNodeWithTitle    = 'measure-leg-segments',
-        #             totalPolls              = 0,
-        #             pluginParameters        = {
-        #                 'measure-leg-segments'  : {
-        #                     'pftelDB'           : self.options.pftelDB
-        #                 }
-        #             }
-        #         ),
-        #         connectionNodeTitle     = 'mergeMarkedJPGSwithDICOMS',
-        #         distalNodeIDs           = [('Topological', 'mergeDICOMSwithInference')],
-        #         topoJoinArgs            = '\.dcm$,\.png$'
-        #     ),
-        #     workflowTitle           = 'PNG-to-DICOM and push to PACS v20230323',
-        #     waitForNodeWithTitle    = 'pacs-push',
-        #     totalPolls              = totalPolls,
-        #     pluginParameters        = {
-        #         'image-to-DICOM'    : {
-        #             'pftelDB'       : self.options.pftelDB
-        #         },
-        #         'pacs-push'         : {
-        #             'pftelDB'       : self.options.pftelDB,
-        #             'orthancUrl'    : self.env.orthanc('url'),
-        #             'username'      : self.env.orthanc('username'),
-        #             'password'      : self.env.orthanc('password')
-        #         }
-        #     }
-        # )
-        # pudb.set_trace()
         return d_ret
 
     def __call__(self, filteredCopyInstanceID  : int) -> dict:
@@ -743,7 +671,7 @@ class Workflow:
         Returns:
             dict: the compute flow data structure
         """
-        self.newTreeID  : str           = int(filteredCopyInstanceID)
-        d_computeFlow   : dict          = self.computeFlow_build()
+        self.newTreeID:int           = int(filteredCopyInstanceID)
+        d_computeFlow:dict           = self.computeFlow_build()
         return d_computeFlow
 
