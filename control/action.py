@@ -146,7 +146,7 @@ class Workflow:
     '''
 
     def __init__(self, *args, **kwargs):
-        self.env                : data.env          =  None
+        self.env                : data.env          = None
         self.options            : Namespace         = None
 
         for k, v in kwargs.items():
@@ -322,10 +322,12 @@ class Workflow:
             d_response  : dict  = self.cl.get_pipeline_default_parameters(
                                         id_pipeline, {'limit': 1000}
                                 )
+            pudb.set_trace()
             if 'data' in d_response:
                 ld_node         = self.pluginParameters_setInNodes(
-                        self.cl.compute_workflow_nodes_info(d_response['data'], True),
-                        d_pluginParameters)
+                                    self.cl.compute_workflow_nodes_info(d_response['data'], True),
+                                    d_pluginParameters
+                                )
                 for piping in ld_node:
                     if piping.get('compute_resource_name'):
                         del piping['compute_resource_name']
@@ -552,7 +554,7 @@ class Workflow:
                 attachToNodeID = self.parentNode_IDget(*args)
             d_ret = self.waitForNodeInWorkflow(
                         self.workflow_schedule(
-                            attachToNodeID,
+                            str(attachToNodeID),
                             str_workflowTitle,
                             d_pluginParameters
                         ),
@@ -623,75 +625,110 @@ class Workflow:
 
         d_ret : dict = \
         self.flow_executeAndBlockUntilNodeComplete(
-            self.flows_connect(
-                self.flow_executeAndBlockUntilNodeComplete(
-                    self.flows_connect(
-                        self.flow_executeAndBlockUntilNodeComplete(
-                            self.flows_connect(
-                                self.flow_executeAndBlockUntilNodeComplete(
-                                    attachToNodeID          = self.newTreeID,
-                                    workflowTitle           = 'Leg Length Discrepency inference on DICOM inputs v20230323 using CPU',
-                                    waitForNodeWithTitle    = 'heatmaps',
-                                    totalPolls              = totalPolls,
-                                    pluginParameters        = {
-                                        'dcm-to-mha'  : {
-                                                    'imageName'         : 'composite.png',
-                                                    'rotate'            : '90',
-                                                    'pftelDB'           : self.options.pftelDB
-                                        },
-                                        'generate-landmark-heatmaps' : {
-                                                    'heatmapThreshold' : '0.5',
-                                                    'imageType'        : 'jpg',
-                                                    'compositeWeight'  : '0.3,0.7',
-                                                    'pftelDB'           : self.options.pftelDB
-                                        }
-                                    }
-                                ),
-                                connectionNodeTitle     = 'mergeDICOMSwithInference',
-                                distalNodeIDs           = [self.newTreeID],
-                                topoJoinArgs            = '\.dcm$,\.csv$'
-                            ),
-                            workflowTitle           = 'Leg Length Discrepency prediction formatter v20230323',
-                            waitForNodeWithTitle    = 'landmarks-to-json',
-                            totalPolls              = totalPolls,
-                            pluginParameters        = {
-                                'landmarks-to-json' : {
-                                    'pftelDB'       : self.options.pftelDB
-                                }
-                            }
-                        ),
-                        connectionNodeTitle     = 'mergeJPGSwithInference',
-                        distalNodeIDs           = [('Leg Length Discrepency inference', 'heatmaps')],
-                        topoJoinArgs            = '\.jpg$,\.json$'
-                    ),
-                    workflowTitle           = 'Leg Length Discrepency measurements on image v20230323',
-                    waitForNodeWithTitle    = 'measure-leg-segments',
-                    totalPolls              = 0,
-                    pluginParameters        = {
-                        'measure-leg-segments'  : {
-                            'pftelDB'           : self.options.pftelDB
-                        }
-                    }
-                ),
-                connectionNodeTitle     = 'mergeMarkedJPGSwithDICOMS',
-                distalNodeIDs           = [('Topological', 'mergeDICOMSwithInference')],
-                topoJoinArgs            = '\.dcm$,\.png$'
-            ),
-            workflowTitle           = 'PNG-to-DICOM and push to PACS v20230323',
+            attachToNodeID          = self.newTreeID,
+            workflowTitle           = 'Leg Length Discrepency Full Workflow v20230425',
             waitForNodeWithTitle    = 'pacs-push',
             totalPolls              = totalPolls,
             pluginParameters        = {
-                'image-to-DICOM'    : {
-                    'pftelDB'       : self.options.pftelDB
+                'dcm-to-mha'  : {
+                    'imageName'         : 'composite.png',
+                    'rotate'            : '90',
+                    'pftelDB'           : self.options.pftelDB
                 },
-                'pacs-push'         : {
-                    'pftelDB'       : self.options.pftelDB,
-                    'orthancUrl'    : self.env.orthanc('url'),
-                    'username'      : self.env.orthanc('username'),
-                    'password'      : self.env.orthanc('password')
+                'generate-landmark-heatmaps' : {
+                    'heatmapThreshold'  : '0.5',
+                    'imageType'         : 'jpg',
+                    'compositeWeight'   : '0.3,0.7',
+                    'pftelDB'           : self.options.pftelDB
+                },
+                'landmarks-to-json'     : {
+                    'pftelDB'           : self.options.pftelDB
+                },
+                'measure-leg-segments'  : {
+                    'pftelDB'           : self.options.pftelDB
+                },
+                'image-to-DICOM'        : {
+                    'pftelDB'           : self.options.pftelDB
+                },
+                'pacs-push'             : {
+                    'pftelDB'           : self.options.pftelDB,
+                    'orthancUrl'        : self.env.orthanc('url'),
+                    'username'          : self.env.orthanc('username'),
+                    'password'          : self.env.orthanc('password')
                 }
             }
         )
+
+        # self.flow_executeAndBlockUntilNodeComplete(
+        #     self.flows_connect(
+        #         self.flow_executeAndBlockUntilNodeComplete(
+        #             self.flows_connect(
+        #                 self.flow_executeAndBlockUntilNodeComplete(
+        #                     self.flows_connect(
+        #                         self.flow_executeAndBlockUntilNodeComplete(
+        #                             attachToNodeID          = self.newTreeID,
+        #                             workflowTitle           = 'Leg Length Discrepency inference on DICOM inputs v20230323 using CPU',
+        #                             waitForNodeWithTitle    = 'heatmaps',
+        #                             totalPolls              = totalPolls,
+        #                             pluginParameters        = {
+        #                                 'dcm-to-mha'  : {
+        #                                             'imageName'         : 'composite.png',
+        #                                             'rotate'            : '90',
+        #                                             'pftelDB'           : self.options.pftelDB
+        #                                 },
+        #                                 'generate-landmark-heatmaps' : {
+        #                                             'heatmapThreshold' : '0.5',
+        #                                             'imageType'        : 'jpg',
+        #                                             'compositeWeight'  : '0.3,0.7',
+        #                                             'pftelDB'           : self.options.pftelDB
+        #                                 }
+        #                             }
+        #                         ),
+        #                         connectionNodeTitle     = 'mergeDICOMSwithInference',
+        #                         distalNodeIDs           = [self.newTreeID],
+        #                         topoJoinArgs            = '\.dcm$,\.csv$'
+        #                     ),
+        #                     workflowTitle           = 'Leg Length Discrepency prediction formatter v20230323',
+        #                     waitForNodeWithTitle    = 'landmarks-to-json',
+        #                     totalPolls              = totalPolls,
+        #                     pluginParameters        = {
+        #                         'landmarks-to-json' : {
+        #                             'pftelDB'       : self.options.pftelDB
+        #                         }
+        #                     }
+        #                 ),
+        #                 connectionNodeTitle     = 'mergeJPGSwithInference',
+        #                 distalNodeIDs           = [('Leg Length Discrepency inference', 'heatmaps')],
+        #                 topoJoinArgs            = '\.jpg$,\.json$'
+        #             ),
+        #             workflowTitle           = 'Leg Length Discrepency measurements on image v20230323',
+        #             waitForNodeWithTitle    = 'measure-leg-segments',
+        #             totalPolls              = 0,
+        #             pluginParameters        = {
+        #                 'measure-leg-segments'  : {
+        #                     'pftelDB'           : self.options.pftelDB
+        #                 }
+        #             }
+        #         ),
+        #         connectionNodeTitle     = 'mergeMarkedJPGSwithDICOMS',
+        #         distalNodeIDs           = [('Topological', 'mergeDICOMSwithInference')],
+        #         topoJoinArgs            = '\.dcm$,\.png$'
+        #     ),
+        #     workflowTitle           = 'PNG-to-DICOM and push to PACS v20230323',
+        #     waitForNodeWithTitle    = 'pacs-push',
+        #     totalPolls              = totalPolls,
+        #     pluginParameters        = {
+        #         'image-to-DICOM'    : {
+        #             'pftelDB'       : self.options.pftelDB
+        #         },
+        #         'pacs-push'         : {
+        #             'pftelDB'       : self.options.pftelDB,
+        #             'orthancUrl'    : self.env.orthanc('url'),
+        #             'username'      : self.env.orthanc('username'),
+        #             'password'      : self.env.orthanc('password')
+        #         }
+        #     }
+        # )
         # pudb.set_trace()
         return d_ret
 
