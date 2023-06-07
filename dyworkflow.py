@@ -287,19 +287,66 @@ def respawnChild_catchError(PLseed:action.PluginRun, input: Path) -> dict:
     d_seedreplant:dict  = PLseed(str(input), append = "--jsonReturn")
     return d_seedreplant
 
+def childNode_create(options:Namespace, env:data.env, input:Path, d_ret:dict[Any, Any]) -> bool:
+
+    global LOG
+
+    def initLogging_do() -> None:
+        nonlocal str_heartbeat
+        Path('%s/start-%s.touch' % (env.outputdir.touch(), str_threadName))
+        LOG("Processing parent in thread %s..." % str_threadName)
+        fl:TextIOWrapper                = open(str_heartbeat, 'w')
+        fl.write('Start time: {}\n'.format(timenow()))
+        fl.close()
+        LOG("Filtering parent->child in %s" % str(input))
+
+    str_threadName:str              = current_thread().getName()
+    str_heartbeat:str               = str(env.outputdir.joinpath('heartbeat-%s.log' % \
+                                                str_threadName))
+    d_ret['heartbeat']              = str_heartbeat
+    conditional:behavior.Filter     = behavior.Filter()
+    conditional.obj_pass            = behavior.unconditionalPass
+    if not conditional.obj_pass(str(input)):
+        d_ret['status']             = False
+        d_ret['message']            = 'No data in parent was filtered'
+        return False
+
+    initLogging_do()
+
+    PLinputFilter:action.PluginRun  = childFilter_build(options, env)
+    d_ret['childFilter']            = PLinputFilter(str(input))
+    if not d_ret['childFilter']['status']:
+        d_ret['childFilter']['debug'] = respawnChild_catchError(PLinputFilter, input)
+        return False
+
+    return True
+
+def workflow_attachToChild(options:Namespace, env:data.env, d_ret:dict[Any, Any]) -> bool:
+
+    def endLogging_do() -> None:
+        fl:TextIOWrapper                = open(d_ret['heartbeat'], 'w')
+        fl.write('End   time: {}\n'.format(timenow()))
+        fl.close()
+
+    workflow:action.Workflow        = action.Workflow(env = env, options = options)
+    d_ret["workflowRun"]            = workflow(d_ret['childFilter']['branchInstanceID'])
+    endLogging_do()
+    return True
 
 def parentNode_process(options: Namespace, env:data.env, input: Path, output: Path) -> dict:
     """
+    The "main" function of this plugin.
+
     Based on some conditional applied to the <input> file space, direct the
     dynamic "growth" of this feed tree from the parent node of *this* plugin.
 
     Args:
         options (Namespace): CLI options
         input (Path): input path returned by mapper
-        output (Path, optional): ouptut path returned by mapper. Defaults to None.
+        output (Path, optional): output path returned by mapper. Defaults to None.
 
     Returns:
-        dict: resulant object dictionary of this (threaded) growth
+        dict: resultant object dictionary of this (threaded) growth
     """
 
     global LOG, ld_forestResult
@@ -319,57 +366,25 @@ def parentNode_process(options: Namespace, env:data.env, input: Path, output: Pa
         d_ret:dict                      = {
             "status"        : False,
             "message"       : "",
+            "heartbeat"     : "",
             "childFilter"   : d_childFilter,
             "workflowRun"   : d_worflowRun
         }
         return d_ret
 
-    def initLogging_do() -> None:
-        nonlocal str_heartbeat
-        Path('%s/start-%s.touch' % (env.outputdir.touch(), str_threadName))
-        LOG("Processing parent in thread %s..." % str_threadName)
-        fl:TextIOWrapper                = open(str_heartbeat, 'w')
-        fl.write('Start time: {}\n'.format(timenow()))
-        fl.close()
-        LOG("Filtering parent->child in %s" % str(input))
-
-    def endLogging_do() -> None:
-        fl:TextIOWrapper                = open(str_heartbeat, 'w')
-        fl.write('End   time: {}\n'.format(timenow()))
-        fl.close()
-
     # set_trace(term_size=(253, 62), host = '0.0.0.0', port = 7900)
-
+    pudb.set_trace()
     env.set_telnet_trace_if_specified()
     d_ret:dict[Any, Any]            = init_vars()
-    str_threadName:str              = current_thread().getName()
-    str_heartbeat:str               = str(env.outputdir.joinpath('heartbeat-%s.log' % \
-                                                str_threadName))
 
-    conditional:behavior.Filter     = behavior.Filter()
-    conditional.obj_pass            = behavior.unconditionalPass
-    if not conditional.obj_pass(str(input)):
-        d_ret['message']            = 'No data in parent was filtered'
+    if not childNode_create(options, env, input, d_ret):
         return d_ret
 
-    initLogging_do()
-
-    PLinputFilter:action.PluginRun  = childFilter_build(options, env)
-    d_ret['childFilter']            = PLinputFilter(str(input))
-    if not d_ret['childFilter']['status']:
-        d_ret['childFilter']['debug'] = respawnChild_catchError(PLinputFilter, input)
-        return d_ret
-
-    workflow:action.Workflow        = action.Workflow(env = env, options = options)
-    d_ret["workflowRun"]            = workflow(
-                    d_ret['childFilter']['branchInstanceID']
-    )
-
-    endLogging_do()
+    if workflow_attachToChild(options, env, d_ret):
+        ld_forestResult.append(d_ret)
 
     # This global variable is accessed/used to record the results
     # of multijob runs
-    ld_forestResult.append(d_ret)
     return d_ret
 
 def mapper_resolve(options:Namespace, inputdir:Path, outputdir:Path) -> PathMapper:
@@ -449,5 +464,6 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
         for input, output in mapper:
             d_results =   parentNode_process(options, env, input, output)
         print(d_results)
+
 if __name__ == '__main__':
     main()
