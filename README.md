@@ -53,7 +53,7 @@ docker run --rm -it --userns=host  \
     --orthancURL http://10.0.0.230:8042                                 \
     --orthancuser orthanc --orthancpassword orthanc                     \
     --pattern **/*dcm --inNode --thread                                 \
-    --pftelDB https://pftel-chris-public.apps.ocp-prod.massopen.cloud/api/v1/dylld/%timestamp/analysis \
+    --pftelDB https://pftel-chris-public.apps.ocp-prod.massopen.cloud/api/v1/dyworkflow/%timestamp/analysis \
     --pipeline "Leg Length Discrepency Full Workflow v20230425"         \
     --pluginInstanceID 1234                                             \
     /incoming /outgoing
@@ -80,7 +80,7 @@ Mount the source code `dyworkflow.py` into a container to try out changes withou
 
 ```shell
 docker run --rm -it --userns=host                                       \
-    -v $PWD/dyworkflow.py:/usr/local/lib/python3.11/site-packages/dylld.py:ro \
+    -v $PWD/dyworkflow.py:/usr/local/lib/python3.11/site-packages/dyworkflow.py:ro \
     -v $PWD/control:/usr/local/lib/python3.11/site-packages/control:ro  \
     -v $PWD/logic:/usr/local/lib/python3.11/site-packages/logic:ro      \
     -v $PWD/state:/usr/local/lib/python3.11/site-packages/state:ro      \
@@ -91,7 +91,7 @@ docker run --rm -it --userns=host                                       \
     --orthancURL http://10.0.0.230:8042                                 \
     --orthancuser orthanc --orthancpassword orthanc                     \
     --pattern **/*dcm --inNode --thread                                 \
-    --pftelDB https://pftel-chris-public.apps.ocp-prod.massopen.cloud/api/v1/dylld/%timestamp/analysis \
+    --pftelDB https://pftel-chris-public.apps.ocp-prod.massopen.cloud/api/v1/dyworkflow/%timestamp/analysis \
     --pipeline "Leg Length Discrepency Full Workflow v20230425"         \
     --pluginInstanceID 1234                                             \
     /incoming /outgoing
