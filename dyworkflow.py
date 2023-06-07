@@ -44,7 +44,7 @@ timenow:Callable[[], str]       = lambda:\
 
 ld_forestResult:list            = []
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 DISPLAY_TITLE = r"""
        _           _                          _     __ _
@@ -373,7 +373,6 @@ def parentNode_process(options: Namespace, env:data.env, input: Path, output: Pa
         return d_ret
 
     # set_trace(term_size=(253, 62), host = '0.0.0.0', port = 7900)
-    pudb.set_trace()
     env.set_telnet_trace_if_specified()
     d_ret:dict[Any, Any]            = init_vars()
 
@@ -450,7 +449,6 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     :param outputdir: directory where to write output files
     """
 
-    pudb.set_trace()
     options.pftelDB             = preamble(options)
     d_results:dict[Any, Any]    = {}
     env:data.env                = Env_setup(options,
