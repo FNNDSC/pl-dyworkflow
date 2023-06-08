@@ -1,0 +1,27 @@
+---
+version: 3.0
+
+pluginParameters:
+    dcm-to-mha:
+        imageName         : composite.png
+        rotate            : 90
+        pftelDB           : "--pftelDB"
+    generate-landmark-heatmaps:
+        heatmapThreshold  : 0.5
+        imageType         : jpg
+        compositeWeight   : "0.30,0.7"
+        pftelDB           : "--pftelDB"
+    landmarks-to-json:
+        pftelDB           : "--pftelDB"
+    measure-leg-segments:
+        pftelDB           : "--pftelDB"
+    image-to-DICOM:
+        pftelDB           : "--pftelDB"
+    pacs-push:
+        pftelDB           : "--pftelDB"
+        orthancUrl        : "--orthancURL"
+        username          : "--orthancuser"
+        password          : "--orthancpassword"
+        pushToRemote      : "--orthancremote"
+
+...
