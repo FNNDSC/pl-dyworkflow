@@ -7,3 +7,5 @@ python-chrisclient
 pftag
 pflog
 pftel-client
+rich
+pyyaml
