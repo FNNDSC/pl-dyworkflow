@@ -21,6 +21,12 @@ import  json
 from    argparse                import ArgumentParser, Namespace
 from    chrisclient             import client
 import  time
+from    pathlib                 import Path
+from    typing                  import Any
+from    io                      import TextIOWrapper
+import  yaml
+from    rich.console            import Console
+console = Console()
 
 class PluginRun:
     '''
@@ -153,7 +159,7 @@ class Workflow:
             if k == 'env'               : self.env                  = v
             if k == 'options'           : self.options              = v
 
-        self.cl         : client.Client = client.Client(
+        self.cl                 : client.Client = client.Client(
                                             self.env.CUBE('url'),
                                             self.env.CUBE('username'),
                                             self.env.CUBE('password')
@@ -163,6 +169,9 @@ class Workflow:
         self.newTreeID          : int   = -1
         self.ld_workflowhist    : list  = []
         self.ld_topologicalNode : dict  = {'data': []}
+
+        self.pluginParameters:PluginParameters  = PluginParameters(options = self.options)
+        self.pluginParameters_override:bool     = self.pluginParameters.process()
 
     def pluginInstanceID_findWithTitle(self,
             d_workflowDetail    : dict,
@@ -625,37 +634,9 @@ class Workflow:
         self.flow_executeAndBlockUntilNodeComplete(
             attachToNodeID          = self.newTreeID,
             workflowTitle           = self.options.pipeline,
-            waitForNodeWithTitle    = 'pacs-push',
+            waitForNodeWithTitle    = self.pluginParameters.blockOnNode,
             totalPolls              = totalPolls,
-            pluginParameters        = {
-                'dcm-to-mha'  : {
-                    'imageName'         : 'composite.png',
-                    'rotate'            : '90',
-                    'pftelDB'           : self.options.pftelDB
-                },
-                'generate-landmark-heatmaps' : {
-                    'heatmapThreshold'  : '0.5',
-                    'imageType'         : 'jpg',
-                    'compositeWeight'   : '0.3,0.7',
-                    'pftelDB'           : self.options.pftelDB
-                },
-                'landmarks-to-json'     : {
-                    'pftelDB'           : self.options.pftelDB
-                },
-                'measure-leg-segments'  : {
-                    'pftelDB'           : self.options.pftelDB
-                },
-                'image-to-DICOM'        : {
-                    'pftelDB'           : self.options.pftelDB
-                },
-                'pacs-push'             : {
-                    'pftelDB'           : self.options.pftelDB,
-                    'orthancUrl'        : self.env.orthanc('url'),
-                    'username'          : self.env.orthanc('username'),
-                    'password'          : self.env.orthanc('password'),
-                    'pushToRemote'      : self.env.orthanc('remote')
-                }
-            }
+            pluginParameters        = self.pluginParameters.parameterTree_flatten()
         )
 
         return d_ret
@@ -675,3 +656,53 @@ class Workflow:
         d_computeFlow:dict           = self.computeFlow_build()
         return d_computeFlow
 
+class PluginParameters:
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.options:Namespace
+        self.parameterTree:dict[Any,Any]    = {}
+        self.lookupToken:str                = '--'
+        self.blockOnNode:str                = ""
+        self.blockOnNodeFlag:str            = 'blockOnNode'
+        for k, v in kwargs.items():
+            if k == 'options'       : self.options          = v
+            if k == 'lookupToken'   : self.lookupToken      = v
+            if k == 'blockOnNode'   : self.blockOnNodeFlag  = v
+
+    def yml_fileRead(self, filename:Path) -> dict[Any, Any]:
+        contents:dict[Any, Any]     = {}
+        try:
+            stream:TextIOWrapper    = open(str(filename), 'r')
+            contents                = yaml.load(stream, Loader=yaml.FullLoader)
+        except:
+            pass
+        return contents
+
+    def parameterTree_process(self) -> bool:
+        b_ret:bool  = False
+        if not self.parameterTree.get('pluginParameters'):
+            return b_ret
+        d_tree:dict         = self.parameterTree['pluginParameters']
+        if not getattr(self.options, self.blockOnNodeFlag):
+            self.blockOnNode    = list(d_tree.keys())[0]
+        else:
+            self.blockOnNode    = getattr(self.options, self.blockOnNodeFlag)
+        for plugin in d_tree:
+            d_param:dict    = d_tree[plugin]
+            for k,v in d_param.items():
+                if str(v).startswith(self.lookupToken):
+                    lookup:str = v.split(self.lookupToken)[1]
+                    try:
+                        d_param[k]  = getattr(self.options, lookup)
+                        b_ret       = True
+                    except:
+                        b_ret       = False
+        return b_ret
+
+    def parameterTree_flatten(self) -> dict[Any, Any]:
+        d_tree:dict         = self.parameterTree['pluginParameters']
+        return {x:d_tree[x] for x in list(d_tree.keys())}
+
+    def process(self) -> bool:
+        self.parameterTree = self.yml_fileRead(self.options.pipelineParamFile)
+        return self.parameterTree_process()
