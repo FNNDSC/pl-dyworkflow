@@ -18,7 +18,6 @@ from    io                      import TextIOWrapper
 
 from    datetime                import datetime, timezone
 import  json
-
 from    state                   import data
 from    logic                   import behavior
 from    control                 import action
@@ -44,7 +43,7 @@ timenow:Callable[[], str]       = lambda:\
 
 ld_forestResult:list            = []
 
-__version__ = '1.0.2'
+__version__ = '1.1.1'
 
 DISPLAY_TITLE = r"""
        _           _                          _     __ _
@@ -118,6 +117,16 @@ parser.add_argument(
             '--pipeline',
             default = '',
             help    = 'pipeline to attach to each child node'
+)
+parser.add_argument(
+            '--pipelineParamFile',
+            default = '',
+            help    = 'yaml formatted file of pipeline parameters'
+)
+parser.add_argument(
+            '--blockOnNode',
+            default = '',
+            help    = 'optional node on which the controller will wait/block. Useful to measure execution time'
 )
 parser.add_argument(
             '--verbosity',
