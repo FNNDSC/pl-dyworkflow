@@ -120,7 +120,7 @@ parser.add_argument(
 )
 parser.add_argument(
             '--pipelineParamFile',
-            default = '',
+            default = '/usr/local/src/pl-dyworkflow/in/lld_parameters.yml',
             help    = 'yaml formatted file of pipeline parameters'
 )
 parser.add_argument(
@@ -414,6 +414,11 @@ def mapper_resolve(options:Namespace, inputdir:Path, outputdir:Path) -> PathMapp
                             inputdir,
                             outputdir,
                             glob        = options.pattern
+                        )
+    else:
+        mapper:PathMapper  = PathMapper.dir_mapper_deep(
+                            inputdir,
+                            outputdir
                         )
     return mapper
 
