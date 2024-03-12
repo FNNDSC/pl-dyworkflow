@@ -3,7 +3,7 @@ pudb
 pflogf
 pfmisc
 loguru
-python-chrisclient
+python-chrisclient==2.9.1
 pftag
 pflog
 pftel-client
